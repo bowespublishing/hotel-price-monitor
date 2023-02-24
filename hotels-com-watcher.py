@@ -7,7 +7,7 @@ import smtplib
 import mysql.connector
 
 import streamlit as st
-from datetime import datetime
+from datetime import datetime, timedelta
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
@@ -44,6 +44,10 @@ class HintonCalendar:
             '{hotel_code}', self.hotel_specs["hotel_code"])
         _base_url = _base_url.replace(
             '{arrival_date}', self.hotel_specs["arrival_date"])
+        # if self.hotel_specs["plus"]:
+        #     _base_url = _base_url.replace(
+        #         '{departure_date}', self.hotel_specs["plus"])
+        # else:
         _base_url = _base_url.replace(
             '{departure_date}', self.hotel_specs["departure_date"])
         _base_url = _base_url.replace(
@@ -489,14 +493,20 @@ def main():
         if st.button('Submit', disabled=not status, type="primary"):
             date1 = datetime.strptime(arrival_date, "%Y-%m-%d")
             date2 = datetime.strptime(departure_date, "%Y-%m-%d")
+            plus = None
             current_date = datetime.now()
+
+            max_date = date1 + timedelta(days=14)
 
             difference1 = date2 - date1
             difference2 = date1 - current_date
 
-            if difference1.days > 13 or difference1.days < 1 or difference2.days < 1:
+            if difference1.days < 1 or difference2.days < 1:
                 st.error("Please select the correct date!")
                 return
+
+            if difference1.days > 13:
+                plus = str(max_date.date())
 
             with col1:
                 col1.markdown("<h2>Previous Content: </h2>",
@@ -526,6 +536,7 @@ def main():
                         'price_of_watch': str(price_of_watch),
                         'redeem_points': str(redeem_points),
                         'email': email,
+                        'plus': plus,
                     })
 
                     send_content_to_email(email, results)
