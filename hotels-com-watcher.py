@@ -140,16 +140,15 @@ class HintonCalendar:
             self.driver.quit()
             self.driver = None
         return ret_code, result
+    
+def init_connection():
+    """Initiate connection to database. """
+    return mysql.connector.connect(**st.secrets['mysql'])
 
 
 def connect_mysql_database():
 
-    conn = mysql.connector.connect(
-        host=configs["hostname"],
-        user=configs["username"],
-        password=configs["password"],
-        database=configs["database"]
-    )
+    conn = init_connection()
 
     cursor = conn.cursor()
     cursor.execute("SHOW TABLES")
