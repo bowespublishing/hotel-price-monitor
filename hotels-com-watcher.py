@@ -163,12 +163,7 @@ class HintonCalendar:
 
 def connect_mysql_database():
 
-    conn = mysql.connector.connect(
-        host=configs["hostname"],
-        user=configs["username"],
-        password=configs["password"],
-        database=configs["database"]
-    )
+    conn = mysql.connector.connect(**st.secrets['mysql'])
 
     cursor = conn.cursor()
     cursor.execute("SHOW TABLES")
