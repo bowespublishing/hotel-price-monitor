@@ -9,7 +9,9 @@ import mysql.connector
 import streamlit as st
 from datetime import datetime, timedelta
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.service import Service as ChromeService
+#from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
@@ -38,11 +40,18 @@ class HintonCalendar:
         self.nights = int(hotel_specs['nights'])
 
     def initialize_driver(self):
+    
+        chrome_options = webdriver.ChromeOptions()
+        chrome_options.add_argument('--headless')
+        chrome_options.add_argument('--window-size=1920x1080')
+        chrome_options.add_argument('--disable-gpu')
 
-        chromedriver = os.path.abspath('chrome\\chromedriver.exe')
-        self.driver = webdriver.Chrome(chromedriver)
+        self.driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
 
-        self.driver.set_window_size(1300, 1000)
+        #chromedriver = os.path.abspath('chrome\\chromedriver.exe')
+        #self.driver = webdriver.Chrome(chromedriver)
+
+        #self.driver.set_window_size(1300, 1000)
         self.driver.implicitly_wait(0.5)
 
     def launch_calendar(self):
