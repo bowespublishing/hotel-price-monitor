@@ -557,7 +557,7 @@ def main():
             'Departure Date', end_default_date.strftime("%d-%m-%Y"))
         num_of_adults = st.number_input("Number of Adults", 1)
         price_of_watch = st.number_input(
-            "Price of Watch(POINTS)", 1500000, step=1000)
+            "Price of Watch(POINTS)", 5000, step=1000)
         nights = st.number_input("For nights", 1)
 
         email = st.text_input('Email Address', 'example@gmail.com')
