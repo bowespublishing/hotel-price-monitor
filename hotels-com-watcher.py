@@ -103,7 +103,7 @@ class HintonCalendar:
                 except Exception as e:
                     print(e)
                     room_detail_info["PayWithPoint"] = None
-                    room_detail_info["PayWithPointInt"] = 0
+                    room_detail_info["PayWithPointInt"] = 99999999
 
                 try:
                     room_detail_info["QuickBookPrice"] = room_detail_element.find_element(
@@ -122,7 +122,7 @@ class HintonCalendar:
                     print(e)
                     room_detail_info["MoreRatesPrice"] = None
 
-                if room_detail_info["PayWithPointInt"] < int(self.hotel_specs['price_of_watch']):
+                if room_detail_info["PayWithPointInt"] <= int(self.hotel_specs['price_of_watch']):
                     res["room_details"].append(room_detail_info)
 
                 time_logger_en = datetime.now()
