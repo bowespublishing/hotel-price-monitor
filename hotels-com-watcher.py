@@ -11,11 +11,8 @@ from datetime import datetime, timedelta
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.chrome.options import Options
-
-from email.mime.text import MIMEText
+from webdriver_manager.firefox import GeckoDriverManager
+from selenium.webdriver.firefox.options import Options
 
 
 configs = None
@@ -39,11 +36,17 @@ class HintonCalendar:
 
     def initialize_driver(self):
 
-        chromedriver = os.path.abspath('chrome\\chromedriver.exe')
-        self.driver = webdriver.Chrome(chromedriver)
+        firefoxOptions = Options()
+        firefoxOptions.add_argument("--headless")
+        service = Service(GeckoDriverManager().install())
+        self.driver = webdriver.Firefox(
+            options=firefoxOptions,
+            service=service,
+        )
 
         self.driver.set_window_size(1300, 1000)
         self.driver.implicitly_wait(0.5)
+        time.sleep(2)
 
     def launch_calendar(self):
         _base_url = self.base_url.replace(
@@ -63,6 +66,8 @@ class HintonCalendar:
 
     def gather_active_rooms(self):
         res = {}
+        res["filtered_room_count"] = 0
+        res["room_details"] = []
 
         try:
             room_parent = self.driver.find_element(
@@ -73,8 +78,6 @@ class HintonCalendar:
             res["to"] = self.exc_end_date.strftime("%d-%m-%Y")
             res["url"] = self.current_url
             res["total_room_count"] = len(rooms)
-            res["filtered_room_count"] = 0
-            res["room_details"] = []
 
             for room_detail_element in rooms:
                 time_logger_st = datetime.now()
@@ -163,12 +166,7 @@ class HintonCalendar:
 
 def connect_mysql_database():
 
-    conn = mysql.connector.connect(
-        host=configs["hostname"],
-        user=configs["username"],
-        password=configs["password"],
-        database=configs["database"]
-    )
+    conn = mysql.connector.connect(**st.secrets["mysql"])
 
     cursor = conn.cursor()
     cursor.execute("SHOW TABLES")
@@ -180,7 +178,7 @@ def connect_mysql_database():
     else:
         print(f"Table {table_name} does not exist")
 
-        current_date = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+        current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         columns = f"( \
             id INT AUTO_INCREMENT PRIMARY KEY, \
             hotel_code VARCHAR(255), \
@@ -226,7 +224,7 @@ def save_data(results):
     conn, cursor = connect_mysql_database()
 
     print("SAVING DATA... \n")
-    current_date = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+    current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     values = "( \
         hotel_code, \
@@ -276,7 +274,7 @@ def update_data(id, colname, results):
     conn, cursor = connect_mysql_database()
 
     print("UPDATING DATA... \n")
-    current_date = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+    current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     query = f"UPDATE {table_name} SET {colname} = '{json.dumps(results)}', updated_at = '{current_date}' WHERE id = '{id}'"
 
@@ -391,10 +389,6 @@ def generate_email_body(results):
     )
 
     room_details = ""
-    if len(room["SubInfo"]) > 0:
-        sub_info = room["SubInfo"]
-    else:
-        sub_info = ' '
 
     for items in results["rooms_by_date"]:
         room_details += """
@@ -414,6 +408,11 @@ def generate_email_body(results):
                     <ul>
             """
         for room in items["room_details"]:
+
+            if len(room["SubInfo"]) > 0:
+                sub_info = room["SubInfo"]
+            else:
+                sub_info = ' '
 
             sub_room_details += """
             <li>
@@ -444,8 +443,8 @@ def send_content_to_email(email, results={}):
 
     try:
         # Gmail account credentials
-        sender_email = configs["user_mail_address"]
-        password = configs["mail_app_key"]
+        sender_email = st.secrets["gmail"]["email_address"]
+        password = st.secrets["gmail"]["mail_app_key"]
 
         # Email recipient and message
         receiver_email = email
@@ -629,8 +628,6 @@ def main():
 
 
 def watch_hotel_interval():
-    print("watch_hotel_interval")
-
     while True:
         time.sleep(21600)
 
@@ -677,10 +674,17 @@ def watch_hotel_interval():
 if __name__ == '__main__':
     print("__main__")
 
-    is_thread = False
+    is_thread, is_join = False, False
     running_threads = enumerate(list(threading.enumerate()))
+    thread_count = len(list(threading.enumerate()))
+
+    print(thread_count)
 
     for i, thread in running_threads:
+        if is_thread and "Thread-" in thread.name:
+            if is_join:
+                thread.join()
+            is_join = True
         if "watch_hotel_interval" in thread.name:
             print("Already interval exists")
             is_thread = True
@@ -697,7 +701,8 @@ if __name__ == '__main__':
         exit(0)
 
     if not is_thread:
-        thread = threading.Thread(target=watch_hotel_interval)
+        thread = threading.Thread(
+            target=watch_hotel_interval, name="watch_hotel_interval")
         thread.start()
 
     main()

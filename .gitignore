@@ -1,0 +1,5 @@
+__pycache__
+chrome
+config.json
+venv
+secrets.toml
